@@ -4,7 +4,7 @@ echo "1 - Debian"
 echo "2 - Ubuntu"
 echo "3 - Fedora"
 echo "4 - Quit"
-echo -n "Insert your option[1-5]: "
+echo -n "Insert your option[1-4]: "
 
 read choice
 
