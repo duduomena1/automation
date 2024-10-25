@@ -14,9 +14,9 @@ read user
 case $choice in
     1) echo "1 - Debian"
     echo "Update Debian"
-    sudo apt update && sudo apt ugrade -y
+    sudo apt update && sudo apt upgrade -y
     echo "Install Git"
-    sudo apt-get install git-all
+    sudo apt-get install -y git-all
     echo "Remove/update Docker"
     for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do
                 sudo apt-get remove -y $pkg
@@ -45,7 +45,7 @@ case $choice in
     echo "Update Debian"
     sudo apt update && sudo apt ugrade -y
     echo "Install Git"
-    sudo apt-get install git-all
+    sudo apt-get install -y git-all
     echo "Remove/update Docker"
     for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do
                 sudo apt-get remove -y $pkg
