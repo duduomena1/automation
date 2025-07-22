@@ -1,0 +1,33 @@
+#cloud-config
+hostname: user
+user: user
+password: user
+chpasswd: { expire: False }
+ssh_pwauth: True
+package_update: true
+package_upgrade: true
+packages:
+  - qemu-guest-agent
+  - ansible
+write_files:
+  - path: /etc/systemd/system/qemu-guest-agent.service
+    content: |
+      [Unit]
+      Description=QEMU Guest Agent
+      BindsTo=dev-virtio\x2dports-org.qemu.guest_agent.0.device
+      After=dev-virtio\x2dports-org.qemu.guest_agent.0.device
+
+      [Service]
+      ExecStart=/usr/sbin/qemu-ga \
+        --method=virtio-serial \
+        --path=/dev/virtio-ports/org.qemu.guest_agent.0 \
+        --blacklist=guest-file-open,guest-file-close,guest-file-read,guest-file-write,guest-file-seek,guest-file-flush
+      Restart=always
+      RestartSec=0
+
+      [Install]
+      WantedBy=multi-user.target
+runcmd:
+  - systemctl daemon-reload
+  - systemctl enable qemu-guest-agent.service
+  - systemctl start qemu-guest-agent.service
