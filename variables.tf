@@ -1,7 +1,7 @@
 variable "vm_cpu" {
   description = "Number of CPU cores for the VM"
   type        = number
-  default     = 4
+  default     = 8
   
 }
 
@@ -14,7 +14,7 @@ variable "vm_memory" {
 variable "vm_name" {
   description = "Name of the VM"
   type        = string
-  default     = "test-terraform0"
+  default     = "teste-ansible"
 }
 
 variable "vm_ciuser" {
@@ -31,7 +31,7 @@ variable "vm_cipassword" {
 variable "vm_clone" {
   description = "Template to clone for the VM"
   type        = string
-  default     = "debian12-cloudinit"
+  default     = "template"
 }
 
 variable "vm_root_disk_size" {
@@ -43,13 +43,13 @@ variable "vm_root_disk_size" {
 variable "vm_data_disk_size" {
   description = "Size of the data disk for the VM"
   type        = string
-  default     = "500G"
+  default     = "55G"
 }
 
 variable "pm_api_url" {
   description = "Proxmox API URL"
   type        = string
-  default     = "https://<PROXMOX_HOST>:8006/api2/json"
+  default     = "https://192.168.101.30:8006/api2/json"
 }
 
 variable "pm_api_token_id" {
@@ -61,7 +61,8 @@ variable "pm_api_token_id" {
 variable "pm_api_token_secret" {
   description = "Proxmox API token secret"
   type        = string
-  default     = ""
+  default     = "36ff7f9a-b540-429e-a2be-3b1b5d1eaa16"
+  sensitive   = true
 }
 
 variable "pm_tls_insecure" {

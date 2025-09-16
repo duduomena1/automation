@@ -1,0 +1,130 @@
+---
+- name: "Configuração de Discos LVM com XFS"
+  hosts: all
+  gather_facts: true
+  become: true
+  
+  vars:
+    # Configuração de discos por hostname
+    disk_configs:
+      "AMC-banco-prod":
+        device: "/dev/sdb"
+        vg_name: "postgres_vg"
+        lv_name: "postgres_lv"
+        filesystem: "xfs"
+        mount_point: "/var/lib/postgresql"
+        mount_options: "defaults,noatime,nodiratime"
+  
+  tasks:
+
+    - name: "Instalar pacotes necessários para LVM"
+      package:
+        name:
+          - lvm2
+          - xfsprogs
+        state: present
+      retries: 3
+      delay: 10
+
+    - name: "Verificar se este servidor tem discos configurados"
+      set_fact:
+        server_disk_config: "{{ disk_configs[inventory_hostname] | default(None) }}"
+
+    - name: "Informar se servidor não possui configuração de disco"
+      debug:
+        msg: "Servidor {{ inventory_hostname }} não possui discos adicionais configurados"
+      when: server_disk_config is none
+
+    - name: "Processar configuração de disco"
+      block:
+        - name: "Verificar se o disco {{ server_disk_config.device }} existe"
+          stat:
+            path: "{{ server_disk_config.device }}"
+          register: disk_exists
+
+        - name: "Verificar se o PV já existe"
+          command: "pvdisplay {{ server_disk_config.device }}"
+          register: pv_exists
+          changed_when: false
+          failed_when: false
+          when: disk_exists.stat.exists
+
+        - name: "Criar Physical Volume"
+          command: "pvcreate {{ server_disk_config.device }}"
+          when: 
+            - disk_exists.stat.exists
+            - pv_exists.rc != 0
+
+        - name: "Verificar se o Volume Group existe"
+          command: "vgdisplay {{ server_disk_config.vg_name }}"
+          register: vg_exists
+          changed_when: false
+          failed_when: false
+
+        - name: "Criar Volume Group"
+          command: "vgcreate {{ server_disk_config.vg_name }} {{ server_disk_config.device }}"
+          when: 
+            - disk_exists.stat.exists
+            - vg_exists.rc != 0
+
+        - name: "Verificar se o Logical Volume existe"
+          command: "lvdisplay /dev/{{ server_disk_config.vg_name }}/{{ server_disk_config.lv_name }}"
+          register: lv_exists
+          changed_when: false
+          failed_when: false
+
+        - name: "Criar Logical Volume"
+          command: "lvcreate -l 100%FREE -n {{ server_disk_config.lv_name }} {{ server_disk_config.vg_name }}"
+          when: 
+            - disk_exists.stat.exists
+            - lv_exists.rc != 0
+
+        - name: "Verificar se o filesystem já existe"
+          command: "blkid /dev/{{ server_disk_config.vg_name }}/{{ server_disk_config.lv_name }}"
+          register: fs_exists
+          changed_when: false
+          failed_when: false
+
+        - name: "Formatar com XFS"
+          filesystem:
+            fstype: "{{ server_disk_config.filesystem }}"
+            dev: "/dev/{{ server_disk_config.vg_name }}/{{ server_disk_config.lv_name }}"
+            opts: "-f"
+          when: 
+            - disk_exists.stat.exists
+            - "'xfs' not in fs_exists.stdout"
+
+        - name: "Criar diretório de montagem"
+          file:
+            path: "{{ server_disk_config.mount_point }}"
+            state: directory
+            mode: '0755'
+
+        - name: "Montar filesystem"
+          mount:
+            path: "{{ server_disk_config.mount_point }}"
+            src: "/dev/{{ server_disk_config.vg_name }}/{{ server_disk_config.lv_name }}"
+            fstype: "{{ server_disk_config.filesystem }}"
+            opts: "{{ server_disk_config.mount_options }}"
+            state: mounted
+          when: disk_exists.stat.exists
+
+        - name: "Configurar montagem automática no fstab"
+          mount:
+            path: "{{ server_disk_config.mount_point }}"
+            src: "/dev/{{ server_disk_config.vg_name }}/{{ server_disk_config.lv_name }}"
+            fstype: "{{ server_disk_config.filesystem }}"
+            opts: "{{ server_disk_config.mount_options }}"
+            state: present
+          when: disk_exists.stat.exists
+
+      when: server_disk_config is not none
+
+    - name: "Verificar resultado final"
+      command: "df -h"
+      register: disk_usage
+      changed_when: false
+      
+    - name: "Exibir uso de disco"
+      debug:
+        var: disk_usage.stdout_lines

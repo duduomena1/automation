@@ -1,0 +1,53 @@
+#cloud-config
+# Cloud-init configuration for VM network setup
+
+# Update packages on first boot
+package_update: true
+package_upgrade: true
+
+# Install essential packages
+packages:
+  - openssh-server
+  - curl
+  - wget
+  - net-tools
+  - iputils-ping
+
+# SSH configuration
+ssh_authorized_keys: []
+ssh_pwauth: true
+disable_root: false
+
+# Network configuration to ensure proper setup
+write_files:
+  - path: /etc/systemd/system/fix-network.service
+    content: |
+      [Unit]
+      Description=Fix network configuration
+      After=network.target
+      
+      [Service]
+      Type=oneshot
+      ExecStart=/bin/bash -c 'systemctl restart systemd-networkd; systemctl restart networking; sleep 5; ping -c 3 8.8.8.8'
+      RemainAfterExit=yes
+      
+      [Install]
+      WantedBy=multi-user.target
+    permissions: '0644'
+
+# Commands to run on first boot
+runcmd:
+  - systemctl enable fix-network.service
+  - systemctl start fix-network.service
+  - systemctl restart sshd
+  - systemctl enable sshd
+  - echo "Cloud-init completed" > /var/log/cloud-init-custom.log
+
+# Final message
+final_message: "System is ready for use!"
+
+# Reboot after setup to ensure all changes take effect
+power_state:
+  mode: reboot
+  delay: 60
+  message: "Rebooting to apply network configuration"

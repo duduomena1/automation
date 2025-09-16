@@ -8,7 +8,7 @@ provider "proxmox" {
 resource "proxmox_vm_qemu" "cloudinit-example" {
   vmid        = 0
   name        = var.vm_name
-  target_node = "pve"
+  target_node = "pve-dev"
   agent       = 1
   memory      = var.vm_memory
   boot        = "order=scsi0"
@@ -69,7 +69,7 @@ terraform {
   required_providers {
     proxmox = {
       source  = "Telmate/proxmox"
-      version = "3.0.2-rc03"
+      version = "3.0.2-rc04"
     }
   }
 }
